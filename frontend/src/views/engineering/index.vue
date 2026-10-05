@@ -63,8 +63,55 @@
       </tbody>
     </table>
 
+    <section class="notice-panel">
+      <h3 class="notice-title">场地核验通知（来自安置沙盘周计划）</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>通知编号</th>
+            <th>关联计划</th>
+            <th>计划周次</th>
+            <th>户号</th>
+            <th>户主姓名</th>
+            <th>所属隐患点</th>
+            <th>安置地点</th>
+            <th>生成时间</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="notice in notices" :key="String(notice.id)">
+            <td>{{ notice['通知编号'] }}</td>
+            <td>{{ notice['计划编号'] }}</td>
+            <td>{{ notice['计划周次'] }}</td>
+            <td>{{ notice['户号'] }}</td>
+            <td>{{ notice['户主姓名'] }}</td>
+            <td>{{ notice['所属隐患点'] }}</td>
+            <td>{{ notice['安置地点'] }}</td>
+            <td>{{ notice['生成时间'] }}</td>
+            <td>{{ notice.status }}</td>
+            <td>
+              <button
+                v-if="notice.status === '待核验'"
+                class="link"
+                type="button"
+                @click="verifyNotice(Number(notice.id))"
+              >
+                核验完成
+              </button>
+              <span v-else>—</span>
+            </td>
+          </tr>
+          <tr v-if="!notices.length">
+            <td colspan="10" class="empty-state">暂无场地核验通知，安置沙盘确认周计划后自动生成</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <footer class="page-foot">
-      <span>共 {{ total }} 条治理工程记录</span>
+      <span>共 {{ total }} 条治理工程记录 · {{ notices.length }} 条场地核验通知</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
   </section>
@@ -79,6 +126,7 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { listSiteNotices, markNoticeVerified } from '@/api/sandbox-service'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('engineering')
@@ -88,6 +136,7 @@ const statuses = ["待立项", "招标中", "施工中", "已竣工", "待验收
 const stats = [{"label": "项目总数", "value": 0}, {"label": "施工中数", "value": 0}, {"label": "待验收数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+const notices = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -128,9 +177,19 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    notices.value = listSiteNotices()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '治理工程列表读取失败'
   }
+}
+
+function verifyNotice(id: number) {
+  const result = markNoticeVerified(id)
+  if (!result.ok) {
+    errorMessage.value = result.message
+    return
+  }
+  reload()
 }
 
 onMounted(reload)
