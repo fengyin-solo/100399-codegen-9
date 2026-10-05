@@ -24,6 +24,57 @@
       </span>
     </p>
 
+    <section class="notice-panel">
+      <header class="notice-head">
+        <h3>场地核验通知</h3>
+        <span class="notice-desc">
+          来自避险搬迁安置沙盘：周计划确认后自动生成，共 {{ notices.length }} 条，待核验 {{ pendingNoticeCount }} 条。
+        </span>
+      </header>
+      <table v-if="notices.length" class="data-table">
+        <thead>
+          <tr>
+            <th>通知编号</th>
+            <th>关联计划</th>
+            <th>户号</th>
+            <th>户主</th>
+            <th>所属隐患点</th>
+            <th>所在乡镇</th>
+            <th>安置地点</th>
+            <th>生成时间</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="notice in notices" :key="notice.id">
+            <td>{{ notice.通知编号 }}</td>
+            <td>{{ notice.计划编号 }}</td>
+            <td>{{ notice.户号 }}</td>
+            <td>{{ notice.户主姓名 }}</td>
+            <td>{{ notice.所属隐患点 }}</td>
+            <td>{{ notice.所在乡镇 }}</td>
+            <td>{{ notice.安置地点 }}</td>
+            <td>{{ notice.生成时间 }}</td>
+            <td>{{ notice.status }}</td>
+            <td>
+              <button
+                v-if="notice.status === '待核验'"
+                class="link"
+                type="button"
+                @click="complete(notice)"
+              >
+                完成核验
+              </button>
+              <span v-else>—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else class="notice-empty">暂无场地核验通知，安置沙盘确认周计划后会出现在这里。</p>
+      <p v-if="noticeMessage" class="notice-message">{{ noticeMessage }}</p>
+    </section>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -79,6 +130,8 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { completeNotice, listNotices } from '@/api/sandbox-service'
+import type { SiteNotice } from '@/data/sandbox'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('engineering')
@@ -91,6 +144,11 @@ const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
+const notices = ref<SiteNotice[]>([])
+const noticeMessage = ref('')
+const pendingNoticeCount = computed(
+  () => notices.value.filter((notice) => notice.status === '待核验').length,
+)
 const filterFields = columns.slice(0, 3)
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
@@ -133,5 +191,52 @@ function reload() {
   }
 }
 
-onMounted(reload)
+function reloadNotices() {
+  notices.value = listNotices().map((notice) => ({ ...notice }))
+}
+
+function complete(notice: SiteNotice) {
+  const result = completeNotice(notice.id)
+  noticeMessage.value = result.message
+  reloadNotices()
+}
+
+onMounted(() => {
+  reload()
+  reloadNotices()
+})
 </script>
+
+<style scoped>
+.notice-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.notice-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.notice-head h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.notice-desc {
+  color: var(--muted);
+  font-size: 12px;
+}
+.notice-empty {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 6px 0 2px;
+}
+.notice-message {
+  color: #15803d;
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+</style>

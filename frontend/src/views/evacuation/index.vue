@@ -6,7 +6,8 @@
         <p class="page-desc">维护搬迁安置户，围绕户号、所属隐患点、户主姓名、家庭人口做登记、筛选与状态流转。</p>
       </div>
       <div class="page-actions">
-        <button class="btn primary" type="button" @click="openCreate">登记搬迁安置户</button>
+        <RouterLink class="btn primary" to="/evacuation/sandbox">打开安置沙盘</RouterLink>
+        <button class="btn" type="button" @click="openCreate">登记搬迁安置户</button>
         <button class="btn" type="button" @click="exportRows">导出避险搬迁清单</button>
       </div>
     </header>
